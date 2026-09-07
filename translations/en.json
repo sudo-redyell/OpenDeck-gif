@@ -149,6 +149,9 @@
 	"settings.sleep_timeout_minutes.tooltip": "This option controls how many minutes of inactivity will cause devices to enter sleep mode, where a value of 0 disables sleeping automatically.",
 	"settings.sleep_when_computer_locked": "Sleep when computer is locked:",
 	"settings.sleep_when_computer_locked.tooltip": "If this option is enabled, devices will enter sleep mode when the computer locks and all key presses will be suppressed until it is unlocked.",
+	"settings.apply_profile_when_computer_locked": "Apply profile when computer is locked:",
+	"settings.apply_profile_when_computer_locked.tooltip": "If this option is set to a profile, that profile is applied to all devices when the computer locks. When the computer unlocks, each device returns to the profile it had right before the lock.",
+	"settings.apply_profile_when_computer_locked.disabled": "(Disabled)",
 	"settings.statistics": "Contribute statistics:",
 	"settings.updatecheck": "Check for updates:"
 }

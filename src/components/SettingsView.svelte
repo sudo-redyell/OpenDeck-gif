@@ -9,6 +9,7 @@
 	import Tooltip from "./Tooltip.svelte";
 
 	import { t } from "$lib/i18n";
+	import type { DeviceInfo } from "$lib/DeviceInfo";
 	import { settings } from "$lib/settings";
 	import { PRODUCT_NAME } from "$lib/singletons";
 
@@ -19,6 +20,17 @@
 	let showPopup: boolean;
 	let buildInfo: string;
 	(async () => (buildInfo = await invoke("get_build_info")))();
+
+	let profileOptions: string[] = [];
+	(async () => {
+		const devices: { [id: string]: DeviceInfo } = await invoke("get_devices");
+		const ids = new Set<string>();
+		for (const device of Object.keys(devices)) {
+			const profiles: string[] = await invoke("get_profiles", { device });
+			for (const profile of profiles) ids.add(profile);
+		}
+		profileOptions = [...ids].sort();
+	})();
 
 	listen("device_brightness", ({ payload }: { payload: { action: string; value: number } }) => {
 		if (!$settings) return;
@@ -113,6 +125,19 @@
 			<label for="settings-sleep_when_computer_locked" class="text-neutral-400">{$t("settings.sleep_when_computer_locked")}</label>
 			<input type="checkbox" bind:checked={$settings.sleep_when_computer_locked} id="settings-sleep_when_computer_locked" />
 			<Tooltip>{$t("settings.sleep_when_computer_locked.tooltip")}</Tooltip>
+		</div>
+
+		<div class="flex flex-row items-center m-2 space-x-2">
+			<label for="settings-profile_when_locked" class="text-neutral-400">{$t("settings.apply_profile_when_computer_locked")}</label>
+			<div class="select-wrapper">
+				<select bind:value={$settings.profile_when_locked} class="w-auto pr-10!" id="settings-profile_when_locked">
+					<option value="">{$t("settings.apply_profile_when_computer_locked.disabled")}</option>
+					{#each profileOptions as profile}
+						<option value={profile}>{profile}</option>
+					{/each}
+				</select>
+			</div>
+			<Tooltip>{$t("settings.apply_profile_when_computer_locked.tooltip")}</Tooltip>
 		</div>
 
 		<div class="flex flex-row items-center m-2 space-x-2">
