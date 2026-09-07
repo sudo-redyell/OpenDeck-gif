@@ -42,7 +42,7 @@ pub async fn will_disappear(instance: &ActionInstance, clear_on_device: bool) ->
 	)
 	.await?;
 
-	if clear_on_device && let Err(error) = crate::events::outbound::devices::update_image((&instance.context).into(), None).await {
+	if clear_on_device && let Err(error) = crate::events::outbound::devices::update_image((&instance.context).into(), None, None, None).await {
 		log::warn!("Failed to clear device image: {}", error);
 	}
 
