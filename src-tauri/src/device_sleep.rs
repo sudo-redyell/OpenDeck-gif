@@ -16,6 +16,10 @@ pub fn is_device_sleeping(device: &str) -> bool {
 	SLEEPING_DEVICES.contains_key(device)
 }
 
+pub fn is_computer_locked() -> bool {
+	COMPUTER_LOCKED.load(Ordering::Relaxed)
+}
+
 pub fn init_device_sleep() {
 	SLEEP_TIMEOUT_MINUTES.store(crate::store::get_settings().value.sleep_timeout_minutes, Ordering::Relaxed);
 	SLEEP_WHEN_COMPUTER_LOCKED.store(crate::store::get_settings().value.sleep_when_computer_locked, Ordering::Relaxed);

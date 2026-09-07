@@ -17,12 +17,18 @@ pub fn init_power_events() {
 							log::error!("Failed to sleep devices due to screen lock: {error}");
 						}
 					});
+					tauri::async_runtime::spawn(async {
+						crate::lock_profile::apply_profile_for_computer_lock().await;
+					});
 				}
 				PowerState::ScreenUnlocked => {
 					tauri::async_runtime::spawn(async {
 						if let Err(error) = crate::device_sleep::wake_from_computer_lock().await {
 							log::error!("Failed to wake devices due to screen unlock: {error}");
 						}
+					});
+					tauri::async_runtime::spawn(async {
+						crate::lock_profile::restore_profile_after_computer_unlock().await;
 					});
 				}
 				PowerState::Resume => {

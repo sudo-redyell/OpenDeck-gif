@@ -7,6 +7,7 @@ mod elgato;
 mod encoder_layouts;
 mod events;
 mod gif_animation;
+mod lock_profile;
 mod plugins;
 mod power_events;
 mod shared;
@@ -213,6 +214,7 @@ If you have already donated, thank you so much for your support!"#,
 			plugins::initialise_plugins();
 			application_watcher::init_application_watcher();
 			device_sleep::init_device_sleep();
+			lock_profile::init_lock_profile(store::get_settings().value.profile_when_locked);
 			power_events::init_power_events();
 
 			let label = IconMenuItemBuilder::with_id("label", PRODUCT_NAME)
