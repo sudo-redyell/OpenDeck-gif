@@ -81,7 +81,7 @@ pub fn convert_icon(path: String) -> String {
 /// prefix check, so a caller never reads files outside the application state.
 pub fn read_config_image(image: &str) -> Result<Vec<u8>, String> {
 	let path = std::fs::canonicalize(image).map_err(|error| format!("Image path {image:?} not found: {error}"))?;
-	if !path.starts_with(&config_dir()) {
+	if !path.starts_with(config_dir()) {
 		return Err(format!("Image path {path:?} escapes the config directory"));
 	}
 	std::fs::read(&path).map_err(|error| format!("Failed to read image {path:?}: {error}"))
