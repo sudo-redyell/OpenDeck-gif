@@ -75,6 +75,18 @@ pub fn convert_icon(path: String) -> String {
 	}
 }
 
+/// Reads a stored profile image path, sandboxed to the config directory.
+///
+/// Paths escaping the config directory are rejected, mirroring the webserver's
+/// prefix check, so a caller never reads files outside the application state.
+pub fn read_config_image(image: &str) -> Result<Vec<u8>, String> {
+	let path = std::fs::canonicalize(image).map_err(|error| format!("Image path {image:?} not found: {error}"))?;
+	if !path.starts_with(&config_dir()) {
+		return Err(format!("Image path {path:?} escapes the config directory"));
+	}
+	std::fs::read(&path).map_err(|error| format!("Failed to read image {path:?}: {error}"))
+}
+
 #[derive(Clone, Copy, Serialize)]
 pub struct FontSize(pub u16);
 impl<'de> Deserialize<'de> for FontSize {

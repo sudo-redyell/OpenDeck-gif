@@ -176,7 +176,24 @@ export async function renderImage(
 
 	context.restore();
 
-	if (active && slotContext) setTimeout(async () => await invoke("update_image", { context: slotContext, image: canvas.toDataURL("image/jpeg") }), 10);
+	if (active && slotContext)
+		setTimeout(async () => {
+			// Raw animated GIFs stream from the backend; text overlays only exist on the
+			// canvas, so GIFs with visible text keep the static path to keep the overlay.
+			// GIFs can be stored as data URLs or as paths inside the image store.
+			const resolvedImage = processImage ? getImage(state.image, fallback) : state.image;
+			const animatedGif =
+				(resolvedImage.startsWith("data:image/gif") && resolvedImage.includes(";base64,")) ||
+				(!state.image.startsWith("data:") && state.image.toLowerCase().endsWith(".gif"));
+			const showsTextOverImage = state.show && state.text.trim() != "";
+			const rawAnimatedGif = animatedGif && !showsTextOverImage && slotContext.controller == "Keypad" && slotContext.device.startsWith("sd-");
+			await invoke("update_image", {
+				context: slotContext,
+				image: rawAnimatedGif ? (state.image.startsWith("data:") ? resolvedImage : state.image) : canvas.toDataURL("image/jpeg"),
+				backgroundColour: state.background_colour,
+				imageScale: state.image_scale || 100,
+			});
+		}, 10);
 }
 
 export async function resizeImage(source: string): Promise<string | undefined> {

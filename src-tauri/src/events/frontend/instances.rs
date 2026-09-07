@@ -267,12 +267,12 @@ pub async fn set_child_delay(parent_context: ActionContext, index: usize, delay_
 }
 
 #[command]
-pub async fn update_image(context: Context, image: Option<String>) {
+pub async fn update_image(context: Context, image: Option<String>, background_colour: Option<String>, image_scale: Option<u8>) {
 	if Some(&context.profile) != crate::store::profiles::DEVICE_STORES.write().await.get_selected_profile(&context.device).ok().as_ref() {
 		return;
 	}
 
-	if let Err(error) = crate::events::outbound::devices::update_image(context, image).await {
+	if let Err(error) = crate::events::outbound::devices::update_image(context, image, background_colour, image_scale).await {
 		log::warn!("Failed to update device image: {}", error);
 	}
 }

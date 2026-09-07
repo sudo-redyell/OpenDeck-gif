@@ -87,6 +87,7 @@ pub async fn deregister_device(uuid: &str, event: PayloadEvent<String>) -> Resul
 		let _ = crate::events::outbound::devices::device_did_disconnect(&event.payload).await;
 		DEVICES.remove(&event.payload);
 		crate::device_sleep::deregister_device(&event.payload);
+		crate::elgato::cancel_device_animations(&event.payload);
 		crate::events::frontend::update_devices().await;
 
 		Ok(())

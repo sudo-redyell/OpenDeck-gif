@@ -4,8 +4,10 @@ use crate::events::inbound;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::LazyLock;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
-use base64::Engine as _;
+use dashmap::DashMap;
 use elgato_streamdeck::{
 	AsyncStreamDeck, DeviceStateUpdate,
 	images::{ImageRect, convert_image_with_format_async},
@@ -17,6 +19,12 @@ use tokio::sync::RwLock;
 static ELGATO_DEVICES: LazyLock<RwLock<HashMap<String, AsyncStreamDeck>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 static HIDAPI: LazyLock<RwLock<Option<Arc<hidapi::HidApi>>>> = LazyLock::new(|| RwLock::new(None));
 
+/// Running button animation loops, keyed by `device/controller/position`.
+/// Values carry a generation counter so a finished task only ever removes its
+/// own entry, and an abort handle for replacement.
+static ANIMATION_TASKS: LazyLock<DashMap<String, (u64, Option<tokio::task::AbortHandle>)>> = LazyLock::new(DashMap::new);
+static ANIMATION_GENERATION: AtomicU64 = AtomicU64::new(0);
+
 /// Extract the average colour from an image.
 fn extract_average_colour(img: &image::DynamicImage) -> (u8, u8, u8) {
 	let (r_sum, g_sum, b_sum) = img
@@ -26,7 +34,7 @@ fn extract_average_colour(img: &image::DynamicImage) -> (u8, u8, u8) {
 	((r_sum / count) as u8, (g_sum / count) as u8, (b_sum / count) as u8)
 }
 
-pub async fn update_image(context: &crate::shared::Context, image: Option<&str>) -> Result<(), anyhow::Error> {
+pub async fn update_image(context: &crate::shared::Context, image: Option<&str>, background: Option<&str>, image_scale: Option<u8>) -> Result<(), anyhow::Error> {
 	if let Some(device) = ELGATO_DEVICES.read().await.get(&context.device) {
 		let kind = device.kind();
 		if !kind.is_visual() {
@@ -36,8 +44,12 @@ pub async fn update_image(context: &crate::shared::Context, image: Option<&str>)
 		let is_touch_point = context.controller == "Keypad" && context.position >= key_count;
 
 		if let Some(image) = image {
-			let data = image.split_once(',').unwrap().1;
-			let bytes = base64::engine::general_purpose::STANDARD.decode(data)?;
+			let bytes = if image.starts_with("data:") {
+				crate::gif_animation::extract_base64_payload(image).ok_or_else(|| anyhow::anyhow!("Unsupported image payload; expected a base64 data URL"))?
+			} else {
+				// Profile images stay absolute paths inside the image store.
+				crate::shared::read_config_image(image).map_err(anyhow::Error::msg)?
+			};
 			if context.controller == "Encoder" {
 				let mut img = generate_encoder_image(context, &bytes).await?;
 				let Some(format) = device.kind().lcd_image_format() else {
@@ -61,6 +73,13 @@ pub async fn update_image(context: &crate::shared::Context, image: Option<&str>)
 				let (r, g, b) = extract_average_colour(&image::load_from_memory(&bytes)?);
 				device.set_touchpoint_color(context.position - key_count, r, g, b).await?;
 			} else {
+				// Regular buttons stream animated GIFs frame by frame; a single
+				// frame (or any other format) follows the static path.
+				if let Some(animation) = crate::gif_animation::decode_animated_gif(&bytes).map_err(anyhow::Error::msg)? {
+					start_button_animation(context, animation, background, image_scale).await?;
+					return Ok(());
+				}
+				cancel_button_animation(context);
 				device.set_button_image(context.position, image::load_from_memory(&bytes)?).await?;
 			}
 		} else if context.controller == "Encoder" {
@@ -84,6 +103,7 @@ pub async fn update_image(context: &crate::shared::Context, image: Option<&str>)
 		} else if is_touch_point {
 			device.set_touchpoint_color(context.position - key_count, 0, 0, 0).await?;
 		} else {
+			cancel_button_animation(context);
 			device.clear_button_image(context.position).await?;
 		}
 		device.flush().await?;
@@ -99,6 +119,7 @@ async fn clear_all_touchpoints(device: &AsyncStreamDeck) {
 }
 
 pub async fn clear_screen(id: &str) -> Result<(), anyhow::Error> {
+	cancel_device_animations(id);
 	if let Some(device) = ELGATO_DEVICES.read().await.get(id) {
 		device.clear_all_button_images().await?;
 		if let Some(lcd_format) = device.kind().lcd_image_format() {
@@ -126,6 +147,88 @@ pub async fn reset_devices() {
 	for (_id, device) in ELGATO_DEVICES.read().await.iter() {
 		let _ = device.reset().await;
 		let _ = device.flush().await;
+	}
+}
+
+fn animation_key(context: &crate::shared::Context) -> String {
+	format!("{}/{}/{}", context.device, context.controller, context.position)
+}
+
+fn cancel_button_animation(context: &crate::shared::Context) {
+	if let Some((_, task)) = ANIMATION_TASKS.remove(&animation_key(context))
+		&& let Some(handle) = task.1
+	{
+		handle.abort();
+	}
+}
+
+/// Cancels every running button animation for a device.
+pub fn cancel_device_animations(device: &str) {
+	let prefix = format!("{device}/");
+	let keys: Vec<String> = ANIMATION_TASKS.iter().filter(|entry| entry.key().starts_with(&prefix)).map(|entry| entry.key().clone()).collect();
+	for key in keys {
+		if let Some((_, task)) = ANIMATION_TASKS.remove(&key)
+			&& let Some(handle) = task.1
+		{
+			handle.abort();
+		}
+	}
+}
+
+async fn start_button_animation(context: &crate::shared::Context, animation: crate::gif_animation::AnimatedImage, background: Option<&str>, image_scale: Option<u8>) -> Result<(), anyhow::Error> {
+	let Some(device) = ELGATO_DEVICES.read().await.get(&context.device).cloned() else {
+		return Ok(());
+	};
+
+	let frames = animation
+		.frames
+		.iter()
+		.map(|frame| image::DynamicImage::ImageRgba8(crate::gif_animation::compose_frame(frame, background, image_scale)))
+		.collect::<Vec<_>>();
+	let delays = animation.delays.clone();
+
+	let generation = ANIMATION_GENERATION.fetch_add(1, Ordering::Relaxed);
+
+	// The registry entry lock spans abort + replace so two tasks never write one button.
+	let previous_handle = {
+		let mut entry = ANIMATION_TASKS.entry(animation_key(context)).or_insert((u64::MAX, None));
+		let previous_handle = entry.1.take();
+		let handle = tokio::spawn(run_button_animation(
+			device,
+			context.position,
+			context.device.clone(),
+			animation_key(context),
+			generation,
+			frames,
+			delays,
+		))
+		.abort_handle();
+		*entry = (generation, Some(handle));
+		previous_handle
+	};
+	if let Some(previous_handle) = previous_handle {
+		previous_handle.abort();
+	}
+	Ok(())
+}
+
+async fn run_button_animation(device: AsyncStreamDeck, position: u8, device_id: String, key: String, generation: u64, frames: Vec<image::DynamicImage>, delays: Vec<Duration>) {
+	loop {
+		for (frame, delay) in frames.iter().zip(delays.iter()) {
+			// Skip writes while the device sleeps (brightness 0), keeping the loop ticking.
+			if !crate::device_sleep::is_device_sleeping(&device_id) {
+				let result = match device.set_button_image(position, frame.clone()).await {
+					Ok(()) => device.flush().await,
+					Err(error) => Err(error),
+				};
+				if let Err(error) = result {
+					log::warn!("Stopped button animation for {key}: {error}");
+					ANIMATION_TASKS.remove_if(&key, |_, (running, _)| *running == generation);
+					return;
+				}
+			}
+			tokio::time::sleep(*delay).await;
+		}
 	}
 }
 

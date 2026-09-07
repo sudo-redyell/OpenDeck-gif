@@ -3,7 +3,7 @@ use super::{send_to_all_plugins, send_to_plugin};
 use crate::encoder_layouts::generate_encoder_image;
 use crate::plugins::{DEVICE_NAMESPACES, info_param::DeviceInfo};
 
-use base64::Engine;
+use base64::Engine as _;
 use image::ImageFormat;
 use serde::Serialize;
 use std::io::Cursor;
@@ -48,7 +48,7 @@ struct SetImageEvent {
 	image: Option<String>,
 }
 
-pub async fn update_image(context: crate::shared::Context, image: Option<String>) -> Result<(), anyhow::Error> {
+pub async fn update_image(context: crate::shared::Context, image: Option<String>, background_colour: Option<String>, image_scale: Option<u8>) -> Result<(), anyhow::Error> {
 	if let Some(plugin) = DEVICE_NAMESPACES.read().await.get(&context.device[..2]) {
 		let image = match (context.controller.as_str(), image) {
 			("Encoder", Some(img)) => Some(to_encoder_jpeg_data_uri(&context, &img).await?),
@@ -67,15 +67,14 @@ pub async fn update_image(context: crate::shared::Context, image: Option<String>
 		)
 		.await?;
 	} else if context.device.starts_with("sd-") {
-		crate::elgato::update_image(&context, image.as_deref()).await?;
+		crate::elgato::update_image(&context, image.as_deref(), background_colour.as_deref(), image_scale).await?;
 	}
 
 	Ok(())
 }
 
 async fn to_encoder_jpeg_data_uri(context: &crate::shared::Context, image: &str) -> Result<String, anyhow::Error> {
-	let data = image.split_once(',').unwrap().1;
-	let bytes = base64::engine::general_purpose::STANDARD.decode(data)?;
+	let bytes = crate::gif_animation::extract_base64_payload(image).ok_or_else(|| anyhow::anyhow!("Unsupported encoder image payload; expected a base64 data URL"))?;
 
 	let img = generate_encoder_image(context, &bytes).await?;
 

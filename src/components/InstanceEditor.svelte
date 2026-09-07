@@ -38,9 +38,13 @@
 		reader.onload = async () => {
 			let result = reader.result?.toString();
 			if (result) {
-				let resized = await resizeImage(result);
-				if (resized) instance.states[state].image = resized;
-				else instance.states[state].image = result;
+				// GIFs stay raw so the backend can stream their animation frames.
+				if (result.startsWith("data:image/gif")) instance.states[state].image = result;
+				else {
+					let resized = await resizeImage(result);
+					if (resized) instance.states[state].image = resized;
+					else instance.states[state].image = result;
+				}
 			}
 		};
 
@@ -190,9 +194,12 @@
 				reader.onload = async () => {
 					let result = reader.result?.toString();
 					if (result) {
-						let resized = await resizeImage(result);
-						if (resized) instance.states[state].image = resized;
-						else instance.states[state].image = result;
+						if (result.startsWith("data:image/gif")) instance.states[state].image = result;
+						else {
+							let resized = await resizeImage(result);
+							if (resized) instance.states[state].image = resized;
+							else instance.states[state].image = result;
+						}
 					}
 				};
 
