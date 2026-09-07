@@ -2,9 +2,9 @@
 
 [English](#english) | [한국어](#한국어)
 
-An [OpenDeck](https://github.com/nekename/OpenDeck) fork that plays **animated GIFs** on Stream Deck keys.
+An [OpenDeck](https://github.com/nekename/OpenDeck) fork that plays **animated GIFs** on Stream Deck keys and **auto-applies a profile while the computer is locked**.
 
-[OpenDeck](https://github.com/nekename/OpenDeck)를 포크하여 **버튼에서 애니메이션 GIF를 재생**할 수 있게 만든 버전입니다.
+[OpenDeck](https://github.com/nekename/OpenDeck)를 포크하여 **버튼에서 애니메이션 GIF를 재생**하고, **화면 잠금 시 자동으로 프로필을 적용**하는 기능을 추가한 버전입니다.
 
 ![Main menu](.github/readme/mainmenu.png)
 
@@ -21,6 +21,7 @@ An [OpenDeck](https://github.com/nekename/OpenDeck) fork that plays **animated G
   - images stored as files under `~/.config/opendeck/images/<device>/<profile>/<slot>/` (e.g. profiles that reference `0.gif`).
 - **Same rendering rules as static images**: keys are composited on a 144×144 canvas with the configured background color and image scale, and text overlay and other key settings keep working.
 - **Safe file handling**: profile-referenced image paths are resolved only inside OpenDeck's config directory.
+- **Apply profile when computer is locked**: optionally switch every connected device to a profile of your choice while the screen is locked, and restore each device's previous profile automatically on unlock. Pick the profile in *Settings → "Apply profile when computer is locked"*. The locked profile is rendered server-side, so it stays on the device even while the lock screen hides the app window — animated GIFs keep playing.
 - Everything else — plugins, profiles, encoders, multi-actions — behaves like upstream OpenDeck.
 
 ### Requirements
@@ -139,6 +140,7 @@ Profiles that already reference `.gif` files inside the `images/` folder keep pl
   - `~/.config/opendeck/images/<기기>/<프로필>/<슬롯>/` 아래 파일로 저장된 이미지(예: `0.gif`를 참조하는 프로필).
 - **정적 이미지와 동일한 렌더링 규칙**: 144×144 캔버스, 배경색, 이미지 스케일 설정을 그대로 적용하며 텍스트 오버레이 등 다른 설정도 동작합니다.
 - **안전한 파일 처리**: 프로필이 참조하는 이미지 경로는 OpenDeck 설정 디렉터리 내부만 읽도록 제한됩니다.
+- **화면 잠금 시 프로필 자동 적용**: 화면이 잠기면 모든 연결된 기기를 지정한 프로필로 전환하고, 잠금 해제 시 기기별 직전 프로필을 자동 복원합니다. *설정 → "Apply profile when computer is locked"*에서 프로필을 선택하세요. 잠금 프로필은 서버사이드에서 렌더링되므로 잠금 화면이 앱 창을 가린 상태에서도 기기에 그대로 표시되며, 애니메이션 GIF도 계속 재생됩니다.
 - 그 외 모든 기능(플러그인, 프로필, 인코더, Multi Actions 등)은 원본 OpenDeck과 동일합니다.
 
 ### 요구 사항
