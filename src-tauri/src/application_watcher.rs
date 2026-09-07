@@ -39,7 +39,7 @@ pub fn init_application_watcher() {
 				String::new()
 			};
 
-			if app_name != previous {
+			if app_name != previous && !crate::device_sleep::is_computer_locked() {
 				let application_profiles = &APPLICATION_PROFILES.read().await.value;
 				let application = application_profiles.get(&app_name);
 				let default = application_profiles.get("opendeck_default");
