@@ -60,7 +60,35 @@ pub async fn apply_profile_for_computer_lock() {
 			log::error!("Failed to apply profile {profile:?} to device {device} after lock: {error}");
 			continue;
 		}
+		render_profile_images(&device, &profile).await;
 		PREVIOUS_PROFILES.write().unwrap().insert(device, PreviousProfile { applied: profile.clone(), previous });
+	}
+}
+
+/// Draws stored state images server-side; the webview renderer adds nothing while the screen is locked.
+async fn render_profile_images(device: &str, profile: &str) {
+	let locks = crate::store::profiles::acquire_locks().await;
+	let Some(entry) = crate::shared::DEVICES.get(device) else { return };
+	let Ok(store) = locks.profile_stores.get_profile_store(&entry, profile) else { return };
+	for instance in store
+		.value
+		.keys
+		.iter()
+		.flatten()
+		.chain(store.value.sliders.iter().flatten())
+		.chain(store.value.infobars.iter().flatten())
+	{
+		if matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
+			continue;
+		}
+
+		let state = instance.states.get(instance.current_state as usize).or_else(|| instance.states.first());
+		let Some(state) = state else { continue };
+
+		let image = if state.image.is_empty() { None } else { Some(state.image.clone()) };
+		if let Err(error) = crate::events::outbound::devices::update_image((&instance.context).into(), image, Some(state.background_colour.clone()), Some(state.image_scale)).await {
+			log::warn!("Failed to render instance to device at lock: {}", error);
+		}
 	}
 }
 
@@ -81,8 +109,10 @@ pub async fn restore_profile_after_computer_unlock() {
 			continue;
 		}
 
-		if let Err(error) = crate::events::frontend::profiles::set_selected_profile(device.clone(), previous).await {
+		if let Err(error) = crate::events::frontend::profiles::set_selected_profile(device.clone(), previous.clone()).await {
 			log::error!("Failed to restore profile for device {device} after unlock: {error}");
+			continue;
 		}
+		render_profile_images(&device, &previous).await;
 	}
 }
