@@ -6,7 +6,7 @@ An [OpenDeck](https://github.com/nekename/OpenDeck) fork that plays **animated G
 
 [OpenDeck](https://github.com/nekename/OpenDeck)를 포크하여 **버튼에서 애니메이션 GIF를 재생**하고, **화면 잠금 시 자동으로 프로필을 적용**하는 기능을 추가한 버전입니다.
 
-![Main menu](.github/readme/mainmenu.png)
+![Main menu](.github/readme/mainmenu-2026-09.png)
 
 ---
 
