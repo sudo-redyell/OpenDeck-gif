@@ -10,6 +10,20 @@ An [OpenDeck](https://github.com/nekename/OpenDeck) fork that plays **animated G
 
 ---
 
+## 🚀 Release notes · 포크 기능 이력
+
+**2026-09-09**
+- ✨ **Wallpaper Profile creation** — the new *ADD Wallpaper Profile* button next to the profile selector slices a single gridded PNG into one tile per button (e.g. a 424×248 image with 16px divider strips → 15 exact 72×72 tiles for a 5×3 deck; any image evenly divisible into rows × columns works too) and wires every button with an inert *Run Command* action displaying its tile.
+- ✨ **월페이퍼 프로필 생성** — 프로필 선택 드롭다운 옆 *ADD Wallpaper Profile* 버튼 추가: 격자로 나뉜 PNG 한 장을 버튼당 타일로 분할(예: 16px 구분선을 포함한 424×248 → 5×3 덱용 72×72 타일 15장, 행×열로 균등 분할되는 크기라면 무엇이든 지원)해, 모든 버튼에 무해한 *Run Command* 액션과 각 타일을 즉시 연결합니다.
+- 🎀 **Fork credits in Settings** — the fork's GitHub repository and Sponsors links are shown below the upstream support note in Settings. / 설정에서 원작자 후원 문구 아래에 이 포크의 저장소·스폰서 링크를 노출합니다.
+
+**2026-09-07**
+- ✨ **Animated GIF buttons** — `.gif` key images play frame-by-frame on the device, looping with per-frame delays. / `.gif` 키 이미지를 기기에서 프레임 단위로 반복 재생(프레임별 딜레이 반영).
+- ✨ **Profile applied while the computer is locked** — while the screen is locked every connected device switches to a chosen profile and restores each device's previous profile on unlock; the lock profile renders server-side, so GIFs keep animating even with the app window hidden. / 화면 잠금 중 지정 프로필로 전환하고 잠금 해제 시 기기별 이전 프로필을 복원합니다. 잠금 프로필은 서버사이드 렌더링이라 잠금 화면 뒤에서도 GIF가 계속 재생됩니다.
+- 🩹 **Reliability fixes** — stricter config-image path checks and clearer preview cleanup on slot changes. / 이미지 경로 검사 강화와 슬롯 정리 시 미리보기 누락 수정.
+
+---
+
 <a id="english"></a>
 ## English
 
@@ -22,6 +36,7 @@ An [OpenDeck](https://github.com/nekename/OpenDeck) fork that plays **animated G
 - **Same rendering rules as static images**: keys are composited on a 144×144 canvas with the configured background color and image scale, and text overlay and other key settings keep working.
 - **Safe file handling**: profile-referenced image paths are resolved only inside OpenDeck's config directory.
 - **Apply profile when computer is locked**: optionally switch every connected device to a profile of your choice while the screen is locked, and restore each device's previous profile automatically on unlock. Pick the profile in *Settings → "Apply profile when computer is locked"*. The locked profile is rendered server-side, so it stays on the device even while the lock screen hides the app window — animated GIFs keep playing.
+- **Wallpaper profiles from one gridded image**: the *ADD Wallpaper Profile* button next to the profile selector takes a PNG that is laid out as a grid (e.g. 424×248 = 15 × 72×72 cells with 16px divider strips) and assigns one tile to each of the keypad's buttons, backed by an inert *Run Command* action.
 - Everything else — plugins, profiles, encoders, multi-actions — behaves like upstream OpenDeck.
 
 ### Requirements
@@ -141,6 +156,7 @@ Profiles that already reference `.gif` files inside the `images/` folder keep pl
 - **정적 이미지와 동일한 렌더링 규칙**: 144×144 캔버스, 배경색, 이미지 스케일 설정을 그대로 적용하며 텍스트 오버레이 등 다른 설정도 동작합니다.
 - **안전한 파일 처리**: 프로필이 참조하는 이미지 경로는 OpenDeck 설정 디렉터리 내부만 읽도록 제한됩니다.
 - **화면 잠금 시 프로필 자동 적용**: 화면이 잠기면 모든 연결된 기기를 지정한 프로필로 전환하고, 잠금 해제 시 기기별 직전 프로필을 자동 복원합니다. *설정 → "Apply profile when computer is locked"*에서 프로필을 선택하세요. 잠금 프로필은 서버사이드에서 렌더링되므로 잠금 화면이 앱 창을 가린 상태에서도 기기에 그대로 표시되며, 애니메이션 GIF도 계속 재생됩니다.
+- **격자 이미지로 만드는 월페이퍼 프로필**: 프로필 셀렉터 옆 *ADD Wallpaper Profile* 버튼으로 격자 형태의 PNG 한 장(예: 16px 구분선 포함 424×248 = 72×72 셀 15장)을 받아 키패드 버튼마다 타일을 하나씩 배정하고, 무해한 *Run Command* 액션으로 버튼을 채워 즉시 적용합니다.
 - 그 외 모든 기능(플러그인, 프로필, 인코더, Multi Actions 등)은 원본 OpenDeck과 동일합니다.
 
 ### 요구 사항
