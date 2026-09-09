@@ -3,6 +3,7 @@ pub mod plugins;
 pub mod profiles;
 pub mod property_inspector;
 pub mod settings;
+pub mod wallpaper;
 
 use crate::shared::{CATEGORIES, Category, DEVICES, DeviceInfo};
 
