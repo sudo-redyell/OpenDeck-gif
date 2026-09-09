@@ -4,6 +4,7 @@
 
 	import Browsers from "phosphor-svelte/lib/Browsers";
 	import Copy from "phosphor-svelte/lib/Copy";
+	import FileImage from "phosphor-svelte/lib/FileImage";
 	import FloppyDisk from "phosphor-svelte/lib/FloppyDisk";
 	import Pencil from "phosphor-svelte/lib/Pencil";
 	import Trash from "phosphor-svelte/lib/Trash";
@@ -141,6 +142,41 @@
 	}
 
 	let oldValue: string;
+	let showWallpaperPopup: boolean = false;
+	let wallpaperNameInput: HTMLInputElement;
+	let wallpaperName: string = "";
+	let wallpaperFileInput: HTMLInputElement;
+	let wallpaperImage: string | null = null;
+	let wallpaperFileName: string = "";
+
+	function selectWallpaperImage() {
+		const file = wallpaperFileInput.files?.[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => {
+			wallpaperImage = reader.result as string;
+			wallpaperFileName = file.name;
+		};
+		reader.readAsDataURL(file);
+	}
+
+	async function createWallpaperProfile() {
+		const name = wallpaperName.trim();
+		if (!wallpaperNameInput.checkValidity() || !name || !wallpaperImage) return;
+		try {
+			await invoke("create_wallpaper_profile", { device: device.id, name, image: wallpaperImage });
+			await invoke("set_selected_profile", { device: device.id, id: name });
+		} catch (error: any) {
+			message(error, { title: $t("profile_manager.wallpaper.failed"), buttons: { ok: $t("dialog.ok") } });
+			console.error(error);
+			return;
+		}
+		showWallpaperPopup = false;
+		wallpaperName = "";
+		wallpaperImage = null;
+		wallpaperFileName = "";
+		await getProfiles(device);
+	}
 	$: {
 		if (value == "opendeck_edit_profiles") {
 			if (oldValue) showPopup = true;
@@ -189,24 +225,33 @@
 	}
 </script>
 
-<div class="select-profile-wrapper">
-	<span bind:this={measure} class="invisible fixed whitespace-pre pointer-events-none" aria-hidden="true"></span>
-	<select bind:value style:width="{selectWidth}px" aria-label={$t("profile_manager.label")}>
-		{#each Object.entries(folders).sort() as [id, profiles]}
-			{#if id && profiles.length}
-				<optgroup label={id}>
+<div class="flex flex-row items-center">
+	<div class="select-profile-wrapper">
+		<span bind:this={measure} class="invisible fixed whitespace-pre pointer-events-none" aria-hidden="true"></span>
+		<select bind:value style:width="{selectWidth}px" aria-label={$t("profile_manager.label")}>
+			{#each Object.entries(folders).sort() as [id, profiles]}
+				{#if id && profiles.length}
+					<optgroup label={id}>
+						{#each profiles.sort() as profile}
+							<option value={profile}>{profile.split("/")[1]}</option>
+						{/each}
+					</optgroup>
+				{:else}
 					{#each profiles.sort() as profile}
-						<option value={profile}>{profile.split("/")[1]}</option>
+						<option value={profile}>{profile}</option>
 					{/each}
-				</optgroup>
-			{:else}
-				{#each profiles.sort() as profile}
-					<option value={profile}>{profile}</option>
-				{/each}
-			{/if}
-		{/each}
-		<option value="opendeck_edit_profiles">{$t("profile_manager.edit")}</option>
-	</select>
+				{/if}
+			{/each}
+			<option value="opendeck_edit_profiles">{$t("profile_manager.edit")}</option>
+		</select>
+	</div>
+	<button
+		class="ml-2 px-2 py-1 text-sm text-neutral-400 whitespace-nowrap bg-neutral-900 hover:bg-neutral-800 hover:text-neutral-300 transition-colors border border-neutral-600 rounded-lg"
+		on:click={() => (showWallpaperPopup = true)}
+		aria-label={$t("profile_manager.wallpaper.button")}
+	>
+		{$t("profile_manager.wallpaper.button")}
+	</button>
 </div>
 
 <svelte:window
@@ -214,6 +259,7 @@
 		if (event.key == "Escape") {
 			if (showApplicationManager) showApplicationManager = false;
 			else if (renamingProfile) renamingProfile = null;
+			else if (showWallpaperPopup) showWallpaperPopup = false;
 			else showPopup = false;
 		}
 	}}
@@ -302,6 +348,43 @@
 			{/each}
 		{/each}
 	</div>
+</Popup>
+
+<Popup show={showWallpaperPopup} label={$t("profile_manager.wallpaper.button")}>
+	<button class="mr-1 float-right text-xl text-neutral-300" on:click={() => (showWallpaperPopup = false)} aria-label={$t("settings.close")}>✕</button>
+	<h2 class="text-xl font-semibold text-neutral-300">{$t("profile_manager.wallpaper.button")}</h2>
+
+	<div class="flex flex-row mt-2 mb-1">
+		<input
+			bind:this={wallpaperNameInput}
+			bind:value={wallpaperName}
+			pattern="[a-zA-Z0-9_ ]+"
+			required
+			class="grow p-2 text-neutral-300 invalid:text-red-400 bg-neutral-700 border-l border-y border-neutral-600 rounded-l-lg"
+			placeholder={$t("profile_manager.wallpaper.name")}
+			aria-label={$t("profile_manager.wallpaper.name")}
+			on:keydown={(e) => {
+				if (e.key === "Enter") createWallpaperProfile();
+			}}
+		/>
+
+		<button on:click={createWallpaperProfile} class="px-4 text-neutral-300 bg-neutral-900 hover:bg-neutral-800 transition-colors border-r border-y border-neutral-600 rounded-r-lg">
+			{$t("profile_manager.create")}
+		</button>
+
+		<button
+			type="button"
+			on:click={() => wallpaperFileInput.click()}
+			aria-label={$t("profile_manager.wallpaper.image.aria")}
+			class="ml-2 px-2 flex items-center gap-2 truncate max-w-96 text-neutral-300 bg-neutral-900 hover:bg-neutral-800 transition-colors border border-neutral-600 rounded-lg"
+		>
+			<FileImage size={20} class={wallpaperImage ? "text-green-500 mr-1" : "mr-1"} />
+			<span class="truncate">{wallpaperFileName || $t("profile_manager.wallpaper.image")}</span>
+		</button>
+	</div>
+
+	<span class="text-xs text-neutral-500">{$t("profile_manager.wallpaper.hint")}</span>
+	<input bind:this={wallpaperFileInput} type="file" accept="image/png" class="hidden" on:change={selectWallpaperImage} />
 </Popup>
 
 <Popup show={showApplicationManager} label={$t("profile_manager.application_profiles")}>
