@@ -2,6 +2,7 @@
 	import ClockClockwise from "phosphor-svelte/lib/ClockClockwise";
 	import ClockCounterClockwise from "phosphor-svelte/lib/ClockCounterClockwise";
 	import Gear from "phosphor-svelte/lib/Gear";
+	import GithubLogo from "phosphor-svelte/lib/GithubLogo";
 	import Heart from "phosphor-svelte/lib/Heart";
 	import Scroll from "phosphor-svelte/lib/Scroll";
 	import Star from "phosphor-svelte/lib/Star";
@@ -248,6 +249,18 @@
 			</span>
 			<Heart weight="fill" fill="fuchsia" />
 			<span class="ml-1">{$t("settings.footer.5")}</span>
+		</div>
+		<div class="flex flex-col items-start mt-4 p-2 pt-3 text-sm text-neutral-400 bg-neutral-900 border border-dashed border-neutral-600 rounded-lg">
+			<span class="flex flex-row items-center">
+				<GithubLogo class="mr-2 shrink-0" />
+				{$t("settings.footer_fork.1")}
+				<button on:click={() => invoke("open_url", { url: "https://github.com/sudo-redyell/OpenDeck-gif" })} class="ml-1 underline">{$t("settings.footer_fork.2")}</button>
+			</span>
+			<span class="flex flex-row items-center">
+				<Heart weight="fill" fill="fuchsia" class="mr-2 shrink-0" />
+				{$t("settings.footer_fork.3")}
+				<button on:click={() => invoke("open_url", { url: "https://github.com/sponsors/sudo-redyell" })} class="ml-1 underline">{$t("settings.footer_fork.4")}</button>
+			</span>
 		</div>
 	</svelte:fragment>
 </Popup>
